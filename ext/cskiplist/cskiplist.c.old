@@ -1,0 +1,171 @@
+#include <ruby.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+
+struct SkipListNode {
+    int levels;
+    VALUE *value;
+    struct SkipListNode *next[];
+};
+
+struct SkipList {
+    double p; // propability of node being in next level
+    int maxLevels; // Maximum number of levels
+    struct SkipListNode *levels[];
+};
+
+void sl_init_node(struct SkipListNode *node, int levels, VALUE value) {
+    int i;
+    node = malloc(sizeof(struct SkipListNode));
+    node->levels = levels;
+    node->value = value;
+    for (i = 0; i!= levels; i++) {
+        node->next[i] = NULL;
+    }
+}
+
+void sl_insert(VALUE self, VALUE value) {
+    int levels, i, cmpv, satisfied;
+    struct SkipList *sl;
+    VALUE cmp;
+    ID comparator;
+    struct SkipListNode *nextNode = NULL, *previousNode = NULL, *newNode = NULL;
+    Data_Get_Struct(self, struct SkipList, sl);
+    comparator = rb_intern("<=>");
+    printf("inserting %s at levels %d out of %d\n", STR2CSTR(rb_obj_as_string(value)), levels, sl->maxLevels);
+
+    printf("p is %f\n", sl->p);
+    printf("p is %f\n", drand48());
+    levels = generateNodeLevel(1 - sl->p, sl->maxLevels);
+    printf("levels is %d\n", levels);
+    
+    for(i = 1; i < levels; i++) {
+        if (sl->levels[i] == NULL) {
+            printf("this node is empty at %d, adding\n", i);
+            sl_init_node(sl->levels[i], levels, &value);
+        } else {
+            printf("this node is NOT empty at %d, adding\n", i);
+            satisfied = 0;
+            previousNode = NULL;
+            nextNode = sl->levels[i];
+            while(!satisfied) {
+                
+                if (nextNode == NULL) {
+                    // insert immediately
+                    sl_init_node(previousNode->next[i], levels, &value);
+                }
+                
+                //switch(FIX2INT(rb_apply(value, comparator, nextNode->value))) {
+                //    case 0, -1:
+                //    
+                //    newNode = malloc(sizeof(struct SkipListNode));
+                //    newNode->value = value;
+                //    newNode->next[i] = previousNode;
+                //    
+                //    break;
+                //    case 1:
+                //    break;
+                //    
+                //}
+                //
+                //previousNode = nextNode;
+                //nextNode = previousNode->next[i];
+                satisfied = 1;
+            }
+            
+            
+            
+            printf("this node is NOT empty at %d, adding", i);
+            cmp = sl->levels[i]->value;
+            cmpv = rb_apply(value, comparator, *cmp);
+            if (cmpv == -1 || cmpv == 0) {
+                // insert
+            } else if(cmpv == 1 && sl->levels[i]->next == NULL) { // at the end of the list
+            } else {
+                //cmp = 
+            }
+        }
+    }
+    
+    
+};
+
+void find(struct SkipList *sl) {
+    int i;
+    
+    for (i = sl->maxLevels - 1; i >= 0; i--) {
+        
+    }
+}
+
+int generateNodeLevel(double p, int maxLevel) {
+    int level = 1;
+    printf("%f : %f sample ", drand48(), p);
+
+    while (drand48() < p) level++;
+
+    printf("%d levels\n", ((level > maxLevel) ? maxLevel : level));
+
+    return (level > maxLevel) ? maxLevel : level;
+}
+
+static VALUE cSkiplist;
+
+static VALUE sl_new(VALUE self, VALUE p_rb, VALUE ml_rb) {
+    struct SkipList *sl;
+    VALUE obj;
+    double p;
+    int maxLevels, i;
+
+    maxLevels = FIX2INT(ml_rb);
+    p = NUM2DBL(p_rb);
+    
+    obj = Data_Make_Struct(self, struct SkipList, NULL, xfree, sl);
+    sl->p = p;
+    sl->maxLevels = maxLevels;
+    for(i=0; i!=maxLevels; i++) {
+        sl->levels[i] = NULL;
+    }
+    return obj;
+}
+
+static VALUE sl_get_p(VALUE self) {
+    struct SkipList *sl;
+    Data_Get_Struct(self, struct SkipList, sl);
+    return rb_float_new(sl->p);
+}
+
+static VALUE sl_get_max_levels(VALUE self) {
+    struct SkipList *sl;
+    Data_Get_Struct(self, struct SkipList, sl);
+    return INT2FIX(sl->maxLevels);
+}
+
+void Init_cskiplist(void) {
+    srand48((long)time(NULL));
+    cSkiplist = rb_define_class("CSkipList", rb_cObject);
+    rb_define_singleton_method(cSkiplist, "new", sl_new, 2);
+    rb_define_method(cSkiplist, "p", sl_get_p, 0);
+    rb_define_method(cSkiplist, "max_levels", sl_get_max_levels, 0);
+    rb_define_method(cSkiplist, "insert", sl_insert, 1);
+
+    
+
+    /* functions that have not been implemented, yet */
+
+    //  rb_define_method(cBloomFilter, "&", bf_and, 1);
+    //  rb_define_method(cBloomFilter, "|", bf_or, 1);
+    //  rb_define_method(cBloomFilter, "<=>", bf_cmp, 1);
+}
+
+
+
+//int main() {
+//    struct SkipList *list;
+//    
+//    list = (struct SkipList*) malloc(sizeof(struct SkipList));
+//    init(list, 0.25, 4);
+//    insert(list, "value");
+//    return 0;
+//}
